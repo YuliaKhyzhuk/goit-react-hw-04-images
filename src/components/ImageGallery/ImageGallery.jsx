@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React from 'react';
 import css from 'components/styles.module.css';
 import PropTypes from 'prop-types';
 

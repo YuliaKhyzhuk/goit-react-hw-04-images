@@ -1,4 +1,5 @@
-import React, { Component } from 'react';
+import React from 'react';
+import { useEffect, useState } from 'react';
 import css from './styles.module.css';
 import { PER_PAGE, getImages } from 'services/pixabayApi';
 
@@ -9,88 +10,72 @@ import { Loader } from './Loader/Loader';
 // import { Modal } from './Modal/Modal';
 import { Searchbar } from './Searchbar/Searchbar';
 
-export class App extends Component {
-  state = {
-    images: [],
-    totalHits: 0,
-    page: 1,
-    query: '',
-    error: false,
-    isLoading: false,
-  };
+export function App() {
+  const [images, setImages] = useState([]);
+  const [totalHits, setTotalHits] = useState(0);
+  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState('');
+  const [error, setError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  componentDidUpdate(_, prevState) {
-    if (
-      prevState.query !== this.state.query ||
-      prevState.page !== this.state.page
-    ) {
-      const getImgCollection = async () => {
-        try {
-          this.setState({ isLoading: true });
-
-          const searchedCollection = await getImages(
-            this.state.query,
-            this.state.page
-          );
-          const images = searchedCollection.hits;
-          const totalHits = searchedCollection.totalHits;
-          console.log(images);
-          if (!totalHits) {
-            alert('Nothing found. Please enter another query');
-            return;
-          }
-
-          this.setState(prevState => ({
-            images: [...prevState.images, ...images],
-            totalHits,
-          }));
-        } catch (error) {
-          this.setState({ error: true });
-          alert('Oops! Error loading!');
-        } finally {
-          this.setState({ isLoading: false });
-        }
-      };
-      getImgCollection();
+  useEffect(() => {
+    if (query === '') {
+      return;
     }
-  }
 
-  isMorePagesAvailable(page) {
-    return page * PER_PAGE < this.state.totalHits;
-  }
+    const getImgCollection = async () => {
+      try {
+        setIsLoading(true);
 
-  handleFormSearchSubmit = query => {
-    this.setState({
-      images: [],
-      totalHits: null,
-      page: 1,
+        const searchedCollection = await getImages(query, page);
+        const images = searchedCollection.hits;
+        const totalHits = searchedCollection.totalHits;
+        console.log(images);
+        if (!totalHits) {
+          alert('Nothing found. Please enter another query');
+          return;
+        }
 
-      query: query,
-    });
+        setImages(prevState => [...prevState, ...images]);
+        setTotalHits(totalHits);
+      } catch (error) {
+        setError(true);
+        alert('Oops! Error loading!');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    getImgCollection();
+  }, [query, page]);
+
+  const isMorePagesAvailable = page => {
+    return page * PER_PAGE < totalHits;
   };
 
-  handleLoadMore = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const handleFormSearchSubmit = query => {
+    setImages([]);
+    setTotalHits(null);
+    setPage(1);
+    setQuery(query);
   };
 
-  render() {
-    const { page, images, isLoading } = this.state;
+  const handleLoadMore = () => {
+    setPage(prevState => prevState + 1);
+  };
 
-    return (
-      <div>
-        <div className={css.App}>
-        <Searchbar onSearch={this.handleFormSearchSubmit} />
+  return (
+    <div>
+      <div className={css.App}>
+        <Searchbar onSearch={handleFormSearchSubmit} />
 
         {isLoading && <Loader />}
 
         {images.length !== 0 && <ImageGallery imagesFound={images} />}
-
-        </div>
-
-        {this.isMorePagesAvailable(page) && isLoading === false && (
-          <Button handleLoadMore={this.handleLoadMore} />
-        )}
       </div>
-    );
-  }
+
+      {isMorePagesAvailable(page) && isLoading === false && (
+        <Button handleLoadMore={handleLoadMore} />
+      )}
+    </div>
+  );
 }
